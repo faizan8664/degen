@@ -1,0 +1,72 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.18;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+
+contract WeaponToken is ERC20, Ownable {
+    event WeaponRedeemed(address indexed account, uint8 weapon, uint256 weaponCost);
+    event WeaponAdded(uint8 weaponNumber, uint256 weaponCost);
+
+    mapping(address => uint8) public userSelectedWeapons;
+    mapping(uint8 => uint256) public weaponCosts;
+
+    // Set the initial owner address
+    constructor() ERC20("WeaponToken", "WTK") Ownable(msg.sender) {
+        weaponCosts[1] = 10; // Cost of "Wooden Sword"
+        weaponCosts[2] = 20; // Cost of "Iron Dagger"
+        weaponCosts[3] = 30; // Cost of "Bronze Axe"
+        weaponCosts[4] = 40; // Cost of "Steel Bow"
+    }
+
+    function mint(address to, uint256 count) external onlyOwner {
+        _mint(to, count);
+    }
+
+    function burn(uint256 count) external {
+        require(count > 0, "The count of tokens to destroy must be greater than zero");
+        require(balanceOf(msg.sender) >= count, "Insufficient funds for token destruction");
+        _burn(msg.sender, count);
+    }
+
+    function redeemWeapon(uint8 weaponNumber) external {
+        require(weaponNumber >= 1 && weaponNumber <= 4, "Invalid weapon number");
+
+        uint256 weaponCost = weaponCosts[weaponNumber];
+
+        require(balanceOf(msg.sender) >= weaponCost, "Insufficient funds for weapon redemption");
+        _burn(msg.sender, weaponCost);
+
+        userSelectedWeapons[msg.sender] = weaponNumber;
+        emit WeaponRedeemed(msg.sender, weaponNumber, weaponCost);
+    }
+
+    function transfer_Func(address recipient, uint256 count) external {
+        require(recipient != address(0), "Invalid recipient address provided");
+        require(balanceOf(msg.sender) >= count, "Insufficient funds for token transfer");
+        _transfer(msg.sender, recipient, count);
+    }
+
+    function addWeapon(uint8 weaponNumber, uint256 weaponCost) external onlyOwner {
+        require(weaponNumber >= 5, "Weapon number must be 5 or greater");
+        require(weaponCost > 0, "Weapon cost must be greater than zero");
+
+        weaponCosts[weaponNumber] = weaponCost;
+        emit WeaponAdded(weaponNumber, weaponCost);
+    }
+
+    function claimCustomWeapon(uint8 weaponNumber) external {
+        require(weaponNumber >= 5, "Custom weapon number must be 5 or greater");
+
+        uint256 weaponCost = weaponCosts[weaponNumber];
+
+        require(weaponCost > 0, "Custom weapon not found");
+        require(balanceOf(msg.sender) >= weaponCost, "Insufficient funds for custom weapon redemption");
+
+        _burn(msg.sender, weaponCost);
+        userSelectedWeapons[msg.sender] = weaponNumber;
+
+        emit WeaponRedeemed(msg.sender, weaponNumber, weaponCost);
+    }
+}
